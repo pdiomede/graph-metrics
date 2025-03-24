@@ -79,7 +79,7 @@ export default function Dashboard() {
   };
 
   const aiSummary = data
-    ? `🧠 AI Summary: The Graph Network currently has ${formatGRT(data.totalSupply)} in supply, ${parseInt(data.delegatorCount).toLocaleString()} total delegators, and ${parseInt(data.curatorCount).toLocaleString()} curators.`
+    ? `🧠 AI Summary: The Graph Network currently has ${formatGRT(data.totalSupply)} in supply, ${parseInt(data.activeDelegatorCount).toLocaleString()} active delegators, and ${parseInt(data.curatorCount).toLocaleString()} curators.`
     : null;
 
   return (
