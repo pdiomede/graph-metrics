@@ -157,6 +157,8 @@ export default function DelegationActivity() {
     return undelegatedAt > delegatedAt ? acc + Number(d.unstakedTokens) / 1e18 : acc;
   }, 0);
 
+  const netChange = totalDelegatedGRT - totalUndelegatedGRT;
+
   const sorted = [...filtered].sort((a, b) => {
     const delegatedA = a.lastDelegatedAt || 0;
     const undelegatedA = a.lastUndelegatedAt || 0;
@@ -249,6 +251,7 @@ export default function DelegationActivity() {
         </div>
       </div>
 
+
       <div className="mb-4 text-sm text-gray-500 dark:text-gray-400">
         <p>
           🟢 Total Delegated:{" "}
@@ -261,6 +264,22 @@ export default function DelegationActivity() {
           GRT
         </p>
       </div>
+
+      <div className="mb-4 text-sm text-white space-y-1 w-full max-w-sm">
+  <div className="flex justify-between">
+    <span className="text-white">🟢 Total Delegated:</span>
+    <span className="text-white font-semibold text-right w-40">{totalDelegatedGRT.toLocaleString("en-US", { minimumFractionDigits: 3 })} GRT</span>
+  </div>
+  <div className="flex justify-between">
+    <span className="text-white">🔴 Total Undelegated:</span>
+    <span className="text-white font-semibold text-right w-40">{totalUndelegatedGRT.toLocaleString("en-US", { minimumFractionDigits: 3 })} GRT</span>
+  </div>
+  <div className="flex justify-between">
+    <span className="text-white">📊 Net:</span>
+    <span className="text-white font-semibold text-right w-40">{netChange.toLocaleString("en-US", { minimumFractionDigits: 3 })} GRT</span>
+  </div>
+</div>
+
 
       {error && <p className="text-red-500">{error}</p>}
       {loading && <div className="text-center text-gray-500 py-4">Loading delegations...</div>}
