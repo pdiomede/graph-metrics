@@ -4,10 +4,8 @@ import { formatDistanceToNow } from "date-fns";
 
 
 interface GraphData {
-  totalSupply: string;
   delegatorCount: string;
   activeDelegatorCount: string;
-  curatorCount: string;
 }
 
 function formatGRT(grt: string): string {
@@ -25,10 +23,8 @@ export default function Dashboard() {
     const query = `
       {
         graphNetwork(id: "1") {
-          totalSupply
           delegatorCount
           activeDelegatorCount
-          curatorCount
         }
       }
     `;
@@ -43,10 +39,8 @@ export default function Dashboard() {
         const g = result?.data?.graphNetwork;
         if (!g) throw new Error("No graphNetwork entity returned.");
         setData({
-          totalSupply: g.totalSupply,
           delegatorCount: g.delegatorCount,
-          activeDelegatorCount: g.activeDelegatorCount,
-          curatorCount: g.curatorCount,
+          activeDelegatorCount: g.activeDelegatorCount
         });
         setFetchedAt(new Date());
       })
@@ -60,10 +54,8 @@ export default function Dashboard() {
     if (!data) return;
     const headers = ["Metric", "Value"];
     const rows = [
-      ["Total GRT Supply", data.totalSupply],
       ["Total Delegators", data.delegatorCount],
       ["Active Delegators", data.activeDelegatorCount],
-      ["Total Curators", data.curatorCount]
     ];
     const csvContent =
       "data:text/csv;charset=utf-8," +
@@ -83,7 +75,6 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card title="Total Delegators" value={data?.delegatorCount} />
         <Card title="Active Delegators" value={data?.activeDelegatorCount} />
-        <Card title="Total Curators" value={data?.curatorCount} />
       </div>
       
     </div>
