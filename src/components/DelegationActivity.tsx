@@ -17,6 +17,8 @@ export default function DelegationActivity() {
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState("Updated");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   const PAGE_SIZE = 50;
 
@@ -43,12 +45,10 @@ export default function DelegationActivity() {
     })
       .then(res => res.json())
       .then(res => {
-        console.log('[DelegationActivity] GraphQL response:', res.data);
         setDelegations(res.data.delegatedStakes);
         setLoading(false);
       })
       .catch(err => {
-        console.error("DelegationActivity fetch error:", err);
         setError("Failed to load delegation activity.");
         setLoading(false);
       });
@@ -63,33 +63,59 @@ export default function DelegationActivity() {
     d.indexer.id.toLowerCase().includes(filter.toLowerCase())
   );
 
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const sorted = [...filtered].sort((a, b) => {
+    const delegatedA = a.lastDelegatedAt || 0;
+    const undelegatedA = a.lastUndelegatedAt || 0;
+    const delegatedB = b.lastDelegatedAt || 0;
+    const undelegatedB = b.lastUndelegatedAt || 0;
 
-  const exportCSV = () => {
-    const header = "Type,Delegator,Indexer,Amount,Updated\n";
-    const rows = filtered.map(d => {
-      const isDelegation = (d.lastDelegatedAt || 0) >= (d.lastUndelegatedAt || 0);
-      const amount = isDelegation ? d.stakedTokens : d.unstakedTokens;
-      const updatedAt = new Date(((isDelegation ? d.lastDelegatedAt : d.lastUndelegatedAt) || 0) * 1000);
-      return [
-        isDelegation ? "Delegation" : "Undelegation",
-        d.delegator.id,
-        d.indexer.id,
-        (Number(amount) / 1e18).toFixed(2),
-        updatedAt.toISOString()
-      ].join(",");
-    }).join("\n");
+    const dateA = (delegatedA >= undelegatedA ? delegatedA : undelegatedA);
+    const dateB = (delegatedB >= undelegatedB ? delegatedB : undelegatedB);
 
-    const blob = new Blob([header + rows], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "delegations.csv";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const valA = (() => {
+      switch (sortBy) {
+        case "Type": return (delegatedA >= undelegatedA ? "Delegation" : "Undelegation");
+        case "Delegator": return a.delegator.id;
+        case "Indexer": return b.indexer.id;
+        case "Amount": return parseFloat((delegatedA >= undelegatedA ? a.stakedTokens : a.unstakedTokens));
+        case "Updated": return dateA;
+        default: return dateA;
+      }
+    })();
+
+    const valB = (() => {
+      switch (sortBy) {
+        case "Type": return (delegatedB >= undelegatedB ? "Delegation" : "Undelegation");
+        case "Delegator": return b.delegator.id;
+        case "Indexer": return b.indexer.id;
+        case "Amount": return parseFloat((delegatedB >= undelegatedB ? b.stakedTokens : b.unstakedTokens));
+        case "Updated": return dateB;
+        default: return dateB;
+      }
+    })();
+
+    if (valA < valB) return sortDirection === "asc" ? -1 : 1;
+    if (valA > valB) return sortDirection === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
+
+  const toggleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(column);
+      setSortDirection("asc");
+    }
   };
+
+  const formatAmount = (amt: string) =>
+    (Number(amt) / 1e18).toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
 
   return (
     <div className="mt-10">
@@ -108,32 +134,24 @@ export default function DelegationActivity() {
             }}
             className="px-2 py-1 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
           />
-          <button onClick={fetchDelegations} className="text-sm px-3 py-1 border rounded">
-            🔄 Refresh
-          </button>
-          <button onClick={exportCSV} className="text-sm px-3 py-1 border rounded">
-            ⬇️ Export CSV
-          </button>
+          <button onClick={fetchDelegations} className="text-sm px-3 py-1 border rounded">🔄 Refresh</button>
+          <button onClick={() => exportCSV()} className="text-sm px-3 py-1 border rounded">⬇️ Export CSV</button>
         </div>
       </div>
+
       {error && <p className="text-red-500">{error}</p>}
-      
-      {loading && (
-        <div className="text-center text-gray-500 dark:text-gray-400 py-4">Loading delegations...</div>
-      )}
-      {!loading && filtered.length === 0 && (
-        <div className="text-center text-gray-500 dark:text-gray-400 py-4">No delegation activity found.</div>
-      )}
+      {loading && <div className="text-center text-gray-500 py-4">Loading delegations...</div>}
+      {!loading && sorted.length === 0 && <div className="text-center text-gray-500 py-4">No delegation activity found.</div>}
 
       <div className="overflow-auto">
         <table className="min-w-full table-auto border-collapse text-sm">
           <thead>
-            <tr className="bg-gray-100 dark:bg-gray-700 text-left">
-              <th className="p-2">Type</th>
-              <th className="p-2">Delegator</th>
-              <th className="p-2">Indexer</th>
-              <th className="p-2">Amount (GRT)</th>
-              <th className="p-2">Updated</th>
+            <tr className="bg-gray-100 dark:bg-gray-700 text-left cursor-pointer">
+              {["Type", "Delegator", "Indexer", "Amount", "Updated"].map((col) => (
+                <th key={col} className="p-2" onClick={() => toggleSort(col)}>
+                  {col} {sortBy === col && (sortDirection === "asc" ? "⬆️" : "⬇️")}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -143,18 +161,13 @@ export default function DelegationActivity() {
               const isDelegation = delegatedAt >= undelegatedAt;
               const updatedAt = new Date((isDelegation ? delegatedAt : undelegatedAt) * 1000);
               const amount = isDelegation ? d.stakedTokens : d.unstakedTokens;
+
               return (
                 <tr key={d.id} className="border-t border-gray-200 dark:border-gray-600">
-                  <td className="p-2">
-                    {isDelegation ? (
-                      <span className="text-green-600">🟢 Delegation</span>
-                    ) : (
-                      <span className="text-red-500">🔴 Undelegation</span>
-                    )}
-                  </td>
+                  <td className="p-2">{isDelegation ? "🟢 Delegation" : "🔴 Undelegation"}</td>
                   <td className="p-2"><a href={`https://arbiscan.io/address/${d.delegator.id}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">{d.delegator.id.slice(0, 10)}...</a></td>
                   <td className="p-2"><a href={`https://arbiscan.io/address/${d.indexer.id}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">{d.indexer.id.slice(0, 10)}...</a></td>
-                  <td className="p-2">{(Number(amount) / 1e18).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  <td className="p-2 text-right">{formatAmount(amount)}</td>
                   <td className="p-2">{formatDistanceToNow(updatedAt, { addSuffix: true })}</td>
                 </tr>
               );
@@ -162,6 +175,7 @@ export default function DelegationActivity() {
           </tbody>
         </table>
       </div>
+
       <div className="mt-4 flex justify-center space-x-2">
         {Array.from({ length: totalPages }).map((_, i) => (
           <button
