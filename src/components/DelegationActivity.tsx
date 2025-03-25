@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -62,6 +63,22 @@ export default function DelegationActivity() {
     d.delegator.id.toLowerCase().includes(filter.toLowerCase()) ||
     d.indexer.id.toLowerCase().includes(filter.toLowerCase())
   );
+
+  const totalDelegatedGRT = filtered.reduce((acc, d) => {
+    const delegatedAt = d.lastDelegatedAt || 0;
+    const undelegatedAt = d.lastUndelegatedAt || 0;
+    return delegatedAt >= undelegatedAt
+      ? acc + Number(d.stakedTokens) / 1e18
+      : acc;
+  }, 0);
+
+  const totalUndelegatedGRT = filtered.reduce((acc, d) => {
+    const delegatedAt = d.lastDelegatedAt || 0;
+    const undelegatedAt = d.lastUndelegatedAt || 0;
+    return undelegatedAt > delegatedAt
+      ? acc + Number(d.unstakedTokens) / 1e18
+      : acc;
+  }, 0);
 
   const sorted = [...filtered].sort((a, b) => {
     const delegatedA = a.lastDelegatedAt || 0;
@@ -139,6 +156,11 @@ export default function DelegationActivity() {
         </div>
       </div>
 
+      <div className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+        <p>🟢 Total Delegated: <strong>{totalDelegatedGRT.toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong> GRT</p>
+        <p>🔴 Total Undelegated: <strong>{totalUndelegatedGRT.toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong> GRT</p>
+      </div>
+
       {error && <p className="text-red-500">{error}</p>}
       {loading && <div className="text-center text-gray-500 py-4">Loading delegations...</div>}
       {!loading && sorted.length === 0 && <div className="text-center text-gray-500 py-4">No delegation activity found.</div>}
@@ -165,8 +187,8 @@ export default function DelegationActivity() {
               return (
                 <tr key={d.id} className="border-t border-gray-200 dark:border-gray-600">
                   <td className="p-2">{isDelegation ? "🟢 Delegation" : "🔴 Undelegation"}</td>
-                  <td className="p-2 max-w-xs truncate"><a href={`https://arbiscan.io/address/${d.delegator.id}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">{d.delegator.id}</a></td>
-                  <td className="p-2 max-w-xs truncate"><a href={`https://arbiscan.io/address/${d.indexer.id}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">{d.indexer.id}</a></td>
+                  <td className="p-2 max-w-xs truncate"><a href={`https://thegraph.com/explorer/profile/${d.delegator.id}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">{d.delegator.id}</a></td>
+                  <td className="p-2 max-w-xs truncate"><a href={`https://thegraph.com/explorer/profile/${d.indexer.id}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">{d.indexer.id}</a></td>
                   <td className="p-2 text-right">{formatAmount(amount)}</td>
                   <td className="p-2">{formatDistanceToNow(updatedAt, { addSuffix: true })}</td>
                 </tr>
