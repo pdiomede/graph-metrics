@@ -3,16 +3,8 @@ import { formatDistanceToNow } from "date-fns";
 
 interface Delegation {
   id: string;
-  delegator: { id: string; ensName?: string };
-  indexer: {
-    id: string;
-    ensName?: string;
-    account?: {
-      metadata?: {
-        image?: string;
-      };
-    };
-  };
+  delegator: { id: string; ensName?: string }; // Added ensName
+  indexer: { id: string; ensName?: string };   // Added ensName
   stakedTokens: string;
   unstakedTokens: string;
   lastDelegatedAt: number;
@@ -27,7 +19,7 @@ export default function DelegationActivity() {
   const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState("Updated");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-  const [timeFilter, setTimeFilter] = useState<"all" | "24h" | "48h" | "7d">("all");
+
   const PAGE_SIZE = 50;
 
   // GraphQL query for ENS names
@@ -66,24 +58,15 @@ export default function DelegationActivity() {
     const query = `
       {
         delegatedStakes(first: 100, orderBy: lastDelegatedAt, orderDirection: desc) {
-            id
-            stakedTokens
-            unstakedTokens
-            lastDelegatedAt
-            lastUndelegatedAt
-            delegator {
-              id
-            }
-            indexer {
-              id
-              account {
-                metadata {
-                  image
-                }
-              }
-            }
-          }
+          id
+          stakedTokens
+          unstakedTokens
+          lastDelegatedAt
+          lastUndelegatedAt
+          delegator { id }
+          indexer { id }
         }
+      }
     `;
 
     fetch(import.meta.env.VITE_GRAPH_API, {
@@ -158,27 +141,11 @@ export default function DelegationActivity() {
   }, []);
 
   const filtered = delegations.filter((d) =>
+    d.delegator.id.toLowerCase().includes(filter.toLowerCase()) ||
+    d.delegator.ensName?.toLowerCase().includes(filter.toLowerCase()) ||
     d.indexer.id.toLowerCase().includes(filter.toLowerCase()) ||
-    (d.indexer.ensName?.toLowerCase().includes(filter.toLowerCase()) ?? false)
+    d.indexer.ensName?.toLowerCase().includes(filter.toLowerCase())
   );
-
-  const now = Date.now();
-  const timeFiltered = filtered.filter((d) => {
-    const delegatedAt = d.lastDelegatedAt || 0;
-    const undelegatedAt = d.lastUndelegatedAt || 0;
-    const latestTime = Math.max(delegatedAt, undelegatedAt) * 1000;
-  
-    switch (timeFilter) {
-      case "24h":
-        return latestTime >= now - 24 * 60 * 60 * 1000;
-      case "48h":
-        return latestTime >= now - 48 * 60 * 60 * 1000;
-      case "7d":
-        return latestTime >= now - 7 * 24 * 60 * 60 * 1000;
-      default:
-        return true;
-    }
-  });
 
   const totalDelegatedGRT = filtered.reduce((acc, d) => {
     const delegatedAt = d.lastDelegatedAt || 0;
@@ -191,8 +158,6 @@ export default function DelegationActivity() {
     const undelegatedAt = d.lastUndelegatedAt || 0;
     return undelegatedAt > delegatedAt ? acc + Number(d.unstakedTokens) / 1e18 : acc;
   }, 0);
-
-  const netChange = totalDelegatedGRT - totalUndelegatedGRT;
 
   const sorted = [...filtered].sort((a, b) => {
     const delegatedA = a.lastDelegatedAt || 0;
@@ -263,32 +228,13 @@ export default function DelegationActivity() {
   return (
     <div className="mt-10">
       <div className="flex justify-between items-center mb-4">
-        
-      <h2 className="text-xl font-semibold">
-  <span className="font-normal text-gray-400">(last 100 transactions)</span>
-  <span className="ml-4 text-sm space-x-2">
-    {["all", "24h", "48h", "7d"].map((key) => (
-      <button
-        key={key}
-        className={`underline ${timeFilter === key ? "font-bold" : ""}`}
-        onClick={() => setTimeFilter(key as any)}
-      >
-        {key === "all"
-          ? "All"
-          : key === "24h"
-          ? "Last 24h"
-          : key === "48h"
-          ? "Last 48h"
-          : "Last 7d"}
-      </button>
-    ))}
-  </span>
-</h2>
-
+        <h2 className="text-xl font-semibold">
+          <span className="font-normal text-gray-400">(last 100 transactions)</span>
+        </h2>
         <div className="flex space-x-2">
           <input
             type="text"
-            placeholder="Filter by Indexer ..."
+            placeholder="Filter by address..."
             value={filter}
             onChange={(e) => {
               setFilter(e.target.value);
@@ -305,20 +251,18 @@ export default function DelegationActivity() {
         </div>
       </div>
 
-      <div className="mb-4 text-sm text-black dark:text-white space-y-1 w-full max-w-sm">
-        <div className="flex justify-between">
-          <span className="font-semibold">🟢 Total Delegated:</span>
-          <span className="font-semibold text-right w-40">{totalDelegatedGRT.toLocaleString("en-US", { minimumFractionDigits: 3 })} GRT</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="font-semibold">🔴 Total Undelegated:</span>
-          <span className="font-semibold text-right w-40">{totalUndelegatedGRT.toLocaleString("en-US", { minimumFractionDigits: 3 })} GRT</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="font-semibold">📊 Net:</span>
-          <span className="font-semibold text-right w-40">{netChange.toLocaleString("en-US", { minimumFractionDigits: 3 })} GRT</span>
-        </div>
-    </div>
+      <div className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+        <p>
+          🟢 Total Delegated:{" "}
+          <strong>{totalDelegatedGRT.toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong>{" "}
+          GRT
+        </p>
+        <p>
+          🔴 Total Undelegated:{" "}
+          <strong>{totalUndelegatedGRT.toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong>{" "}
+          GRT
+        </p>
+      </div>
 
       {error && <p className="text-red-500">{error}</p>}
       {loading && <div className="text-center text-gray-500 py-4">Loading delegations...</div>}
@@ -358,27 +302,16 @@ export default function DelegationActivity() {
                       {d.delegator.ensName || d.delegator.id}
                     </a>
                   </td>
-
-                  <td className="p-2 max-w-xs truncate flex items-center space-x-2">
-                    {d.indexer.account?.metadata?.image ? (
-                      <img
-                        src={d.indexer.account.metadata.image}
-                        alt="avatar"
-                        className="w-5 h-5 rounded-full"
-                      />
-                    ) : (
-                      <span className="text-lg">🔗</span>
-                    )}
+                  <td className="p-2 max-w-xs truncate">
                     <a
                       href={`https://thegraph.com/explorer/profile/${d.indexer.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-500 underline ml-1"
+                      className="text-blue-500 underline"
                     >
                       {d.indexer.ensName || d.indexer.id}
                     </a>
                   </td>
-
                   <td className="p-2 text-right">{formatAmount(amount)}</td>
                   <td className="p-2">{formatDistanceToNow(updatedAt, { addSuffix: true })}</td>
                 </tr>

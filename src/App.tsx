@@ -10,7 +10,7 @@ function App() {
           Delegation Activity Log for The Graph Network 👩‍🚀
         </h2>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-500 dark:text-gray-400">v1.0.5</span>
+          <span className="text-sm text-gray-500 dark:text-gray-400">v1.0.1</span>
           <ThemeToggle />
         </div>
       </div>
