@@ -11,8 +11,8 @@ interface GraphData {
 }
 
 function formatGRT(grt: string): string {
-  const grtNumber = Number(grt) / 1e18;
-  const billions = grtNumber / 1e9;
+  const value = parseInt(grt);
+  const billions = value / 1e9;
   return billions.toFixed(2) + " B GRT";
 }
 
@@ -78,41 +78,13 @@ export default function Dashboard() {
     document.body.removeChild(link);
   };
 
-  const aiSummary = data
-    ? `🧠 AI Summary: The Graph Network currently has ${formatGRT(data.totalSupply)} in supply, ${parseInt(data.activeDelegatorCount).toLocaleString()} active delegators, and ${parseInt(data.curatorCount).toLocaleString()} curators.`
-    : null;
-
   return (
     <div>
-
-      
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <Card title="Total GRT Supply" value={data?.totalSupply} readable />
         <Card title="Total Delegators" value={data?.delegatorCount} />
         <Card title="Active Delegators" value={data?.activeDelegatorCount} />
         <Card title="Total Curators" value={data?.curatorCount} />
       </div>
-
-      {fetchedAt && (
-        <p className="mt-4 text-xs text-gray-500">
-          Updated: {formatDistanceToNow(fetchedAt, { addSuffix: true })}
-        </p>
-      )}
-      {aiSummary && (
-        <div className="mt-4 p-4 text-sm bg-blue-50 dark:bg-blue-900 dark:text-white rounded shadow-sm">
-          {aiSummary}
-        </div>
-      )}
-
-      <button
-        onClick={exportCSV}
-        className="mt-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded"
-      >
-        📥 Export CSV
-      </button>
-
-      {error && <p className="mt-4 text-red-500">{error}</p>}
-
       
     </div>
   );
