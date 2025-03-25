@@ -69,15 +69,15 @@ export default function DelegationActivity() {
     const delegatedB = b.lastDelegatedAt || 0;
     const undelegatedB = b.lastUndelegatedAt || 0;
 
-    const dateA = Math.max(delegatedA, undelegatedA);
-    const dateB = Math.max(delegatedB, undelegatedB);
+    const dateA = (delegatedA >= undelegatedA ? delegatedA : undelegatedA);
+    const dateB = (delegatedB >= undelegatedB ? delegatedB : undelegatedB);
 
     const valA = (() => {
       switch (sortBy) {
-        case "Type": return delegatedA >= undelegatedA ? "Delegation" : "Undelegation";
+        case "Type": return (delegatedA >= undelegatedA ? "Delegation" : "Undelegation");
         case "Delegator": return a.delegator.id;
-        case "Indexer": return a.indexer.id;
-        case "Amount": return parseFloat(delegatedA >= undelegatedA ? a.stakedTokens : a.unstakedTokens);
+        case "Indexer": return b.indexer.id;
+        case "Amount": return parseFloat((delegatedA >= undelegatedA ? a.stakedTokens : a.unstakedTokens));
         case "Updated": return dateA;
         default: return dateA;
       }
@@ -85,10 +85,10 @@ export default function DelegationActivity() {
 
     const valB = (() => {
       switch (sortBy) {
-        case "Type": return delegatedB >= undelegatedB ? "Delegation" : "Undelegation";
+        case "Type": return (delegatedB >= undelegatedB ? "Delegation" : "Undelegation");
         case "Delegator": return b.delegator.id;
         case "Indexer": return b.indexer.id;
-        case "Amount": return parseFloat(delegatedB >= undelegatedB ? b.stakedTokens : b.unstakedTokens);
+        case "Amount": return parseFloat((delegatedB >= undelegatedB ? b.stakedTokens : b.unstakedTokens));
         case "Updated": return dateB;
         default: return dateB;
       }
@@ -148,7 +148,7 @@ export default function DelegationActivity() {
           <thead>
             <tr className="bg-gray-100 dark:bg-gray-700 text-left cursor-pointer">
               {["Type", "Delegator", "Indexer", "Amount", "Updated"].map((col) => (
-                <th key={col} className="p-2 whitespace-nowrap" onClick={() => toggleSort(col)}>
+                <th key={col} className="p-2" onClick={() => toggleSort(col)}>
                   {col} {sortBy === col && (sortDirection === "asc" ? "⬆️" : "⬇️")}
                 </th>
               ))}
@@ -165,8 +165,8 @@ export default function DelegationActivity() {
               return (
                 <tr key={d.id} className="border-t border-gray-200 dark:border-gray-600">
                   <td className="p-2">{isDelegation ? "🟢 Delegation" : "🔴 Undelegation"}</td>
-                  <td className="p-2 max-w-xs truncate"><a href={`https://arbiscan.io/address/${d.delegator.id}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">{d.delegator.id}</a></td>
-                  <td className="p-2 max-w-xs truncate"><a href={`https://arbiscan.io/address/${d.indexer.id}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">{d.indexer.id}</a></td>
+                  <td className="p-2"><a href={`https://arbiscan.io/address/${d.delegator.id}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">{d.delegator.id.slice(0, 10)}...</a></td>
+                  <td className="p-2"><a href={`https://arbiscan.io/address/${d.indexer.id}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">{d.indexer.id.slice(0, 10)}...</a></td>
                   <td className="p-2 text-right">{formatAmount(amount)}</td>
                   <td className="p-2">{formatDistanceToNow(updatedAt, { addSuffix: true })}</td>
                 </tr>
